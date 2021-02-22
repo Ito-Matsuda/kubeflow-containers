@@ -14,7 +14,6 @@ ARG NB_GID="100"
 # RUN userdel rstudio \
 #     && useradd jovyan -s /sbin/nologin -u $NB_UID -g $NB_GID
 
-
 USER root
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
@@ -136,12 +135,6 @@ RUN mkdir $RESOURCES_PATH
 RUN python3 -m pip install \
     'git+git://github.com/Ito-Matsuda/jupyter-desktop-server#egg=jupyter-desktop-server'
 
-#RUN conda install -y conda-build
-##Before adding clean-layer: 6.9 GB (including installs)
-##After adding clean-layer: 6.85GB (so it does make it smaller)
-#COPY clean-layer.sh /usr/bin/clean-layer.sh
-#RUN chmod +x /usr/bin/clean-layer.sh
-
 #Fix-permissions
 COPY remote-desktop/fix-permissions.sh /usr/bin/fix-permissions.sh
 RUN chmod u+x /usr/bin/fix-permissions.sh
@@ -201,9 +194,8 @@ RUN \
     # Large package: gnome-user-guide 50MB app-install-data 50MB
     apt-get remove -y app-install-data gnome-user-guide && \
     clean-layer.sh
-#was after vs code before
-#None of these are installed in upstream docker images but are present in current remote
 
+#None of these are installed in upstream docker images but are present in current remote
 #Something like 400 mbs
 RUN \
     apt-get update --fix-missing && \
@@ -305,20 +297,16 @@ RUN \
     ldconfig && \
     # Fix permissions
     fix-permissions.sh && \
-    #$HOME && \
     # Cleanup
     clean-layer.sh
 
-#COPY remote-desktop/firefox.sh $RESOURCES_PATH
 
 # Install Firefox
 RUN /bin/bash $RESOURCES_PATH/firefox.sh --install && \
     # Cleanup
     clean-layer.sh
-    
+
 #Copy the French language pack file, must be the 78.6.1esr version
-
-
 RUN wget https://ftp.mozilla.org/pub/firefox/releases/78.6.1esr/linux-x86_64/xpi/fr.xpi -O langpack-fr@firefox.mozilla.org.xpi && \
     mkdir --parents /usr/lib/firefox/distribution/extensions/ && \
     mv langpack-fr@firefox.mozilla.org.xpi /usr/lib/firefox/distribution/extensions/
@@ -368,8 +356,6 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-#Try adding conda stuff from https://github.com/StatCan/kubeflow-containers-desktop/blob/master/base/Dockerfile#L263
-
 
 #QGIS: #btw need to set firefox to be the browser, set some browser env variable
 COPY qgis-2020.gpg.key $RESOURCES_PATH/qgis-2020.gpg.key
@@ -378,15 +364,10 @@ RUN /bin/bash $RESOURCES_PATH/qgis.sh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists
 
-# WARNING: NOTE: Blair removed this
-##Copy over the path to have it recognized upon startup. This is required
-#COPY qgis.pth /opt/conda/lib/python3.8/site-packages
-
-# #R-Studio this r-runtime messes with the building process
-# #RUN /bin/bash $RESOURCES_PATH/r-runtime.sh && \
-# RUN /bin/bash $RESOURCES_PATH/r-studio-desktop.sh && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists
+#R-Studio
+RUN /bin/bash $RESOURCES_PATH/r-studio-desktop.sh && \
+     apt-get clean && \
+     rm -rf /var/lib/apt/lists
 
 #Libre office
 RUN add-apt-repository ppa:libreoffice/ppa && \
@@ -396,6 +377,7 @@ RUN add-apt-repository ppa:libreoffice/ppa && \
     clean-layer.sh
 
 #Copy over french config for vscode
+#Both of these are required to have the language pack be recognized on install.
 COPY French/vscode/argv.json /home/$NB_USER/.vscode/
 COPY French/vscode/languagepacks.json /home/$NB_USER/.config/Code/
 
@@ -421,13 +403,12 @@ RUN find /home/$NB_USER/Desktop -type f -iname "*.desktop" -exec chmod +x {} \;
 #Copy over French Language files
 COPY French/mo-files/ /usr/share/locale/fr/LC_MESSAGES
 
-
 #Configure the panel
-COPY .config/xfce4/xfce4-panel.xml /home/jovyan/.config/xfce4/xfconf/xfce-perchannel-xml/
+COPY .config/xfce4/xfce4-panel.xml /home/rstudio/.config/xfce4/xfconf/xfce-perchannel-xml/
 
 #Removal area
 #Extra Icons
-RUN rm /usr/share/applications/exo-mail-reader.desktop 
+RUN rm /usr/share/applications/exo-mail-reader.desktop
 #Prevent screen from locking
 RUN apt-get remove -y -q light-locker
 
@@ -447,33 +428,20 @@ RUN apt-get update && apt-get install --yes websockify \
 ADD . /opt/install
 #RUN fix-permissions /opt/install
 
-
-#Instead of using the environment.yml file you can just do a
-# regular (conda forge) conda install websockify
-# RUN conda install -c conda-forge websockify
-#RUN cd /opt/install && \
-#   conda env update -n base --file environment.yml
-
-##Use this instead of infinity for now
-## Configure container startup
-#WORKDIR /home/$NB_USER
-#EXPOSE 8888
-#COPY start-remote-desktop.sh /usr/local/bin/
-#COPY mc-tenant-wrapper.sh /usr/local/bin/mc
-#USER $NB_USER
-#ENTRYPOINT ["tini", "--"]
-#CMD ["start-remote-desktop.sh"]
+#Set Defaults
+ENV DEFAULT_JUPYTER_URL=desktop/?autoconnect=true
+ENV HOME=/home/jovyan
 
 ###############################
-###  docker-bits/∞_CMD.Dockerfile
+###  docker-bits/∞_CMD_RemoteDesktop.Dockerfile
 ###############################
 
 # Configure container startup
 
 WORKDIR /home/$NB_USER
 EXPOSE 8888
-COPY start-custom.sh /usr/local/bin/
+COPY start-remote-desktop.sh /usr/local/bin/
 COPY mc-tenant-wrapper.sh /usr/local/bin/mc 
 USER $NB_USER
 ENTRYPOINT ["tini", "--"]
-CMD ["start-custom.sh"]
+CMD ["start-remote-desktop.sh"]

@@ -20,12 +20,6 @@ RUN mkdir $RESOURCES_PATH
 RUN python3 -m pip install \
     'git+git://github.com/Ito-Matsuda/jupyter-desktop-server#egg=jupyter-desktop-server'
 
-#RUN conda install -y conda-build
-##Before adding clean-layer: 6.9 GB (including installs)
-##After adding clean-layer: 6.85GB (so it does make it smaller)
-#COPY clean-layer.sh /usr/bin/clean-layer.sh
-#RUN chmod +x /usr/bin/clean-layer.sh
-
 #Fix-permissions
 COPY remote-desktop/fix-permissions.sh /usr/bin/fix-permissions.sh
 RUN chmod u+x /usr/bin/fix-permissions.sh
@@ -85,7 +79,6 @@ RUN \
     # Large package: gnome-user-guide 50MB app-install-data 50MB
     apt-get remove -y app-install-data gnome-user-guide && \
     clean-layer.sh
-#was after vs code before
 
 #None of these are installed in upstream docker images but are present in current remote
 #Something like 400 mbs
@@ -189,11 +182,9 @@ RUN \
     ldconfig && \
     # Fix permissions
     fix-permissions.sh && \
-    #$HOME && \
     # Cleanup
     clean-layer.sh
 
-#COPY remote-desktop/firefox.sh $RESOURCES_PATH
 
 # Install Firefox
 RUN /bin/bash $RESOURCES_PATH/firefox.sh --install && \
@@ -250,8 +241,6 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-#Try adding conda stuff from https://github.com/StatCan/kubeflow-containers-desktop/blob/master/base/Dockerfile#L263
-
 
 #QGIS: #btw need to set firefox to be the browser, set some browser env variable
 COPY qgis-2020.gpg.key $RESOURCES_PATH/qgis-2020.gpg.key
@@ -260,15 +249,10 @@ RUN /bin/bash $RESOURCES_PATH/qgis.sh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists
 
-# WARNING: NOTE: Blair removed this
-##Copy over the path to have it recognized upon startup. This is required
-#COPY qgis.pth /opt/conda/lib/python3.8/site-packages
-
-# #R-Studio this r-runtime messes with the building process
-# #RUN /bin/bash $RESOURCES_PATH/r-runtime.sh && \
-# RUN /bin/bash $RESOURCES_PATH/r-studio-desktop.sh && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists
+#R-Studio
+RUN /bin/bash $RESOURCES_PATH/r-studio-desktop.sh && \
+     apt-get clean && \
+     rm -rf /var/lib/apt/lists
 
 #Libre office
 RUN add-apt-repository ppa:libreoffice/ppa && \
@@ -295,7 +279,7 @@ RUN \
 
 
 #MISC Configuration Area
-#Copy over desktop files. First is dropdown, second is desktop and make themm executable
+#Copy over desktop files. First is dropdown, second is desktop and make them executable
 COPY /desktop-files /usr/share/applications
 COPY /desktop-files /home/$NB_USER/Desktop
 #COPY /usr/share/applications/org.qgis.qgis.desktop /home/$NB_USER/Desktop
@@ -304,16 +288,8 @@ RUN find /home/$NB_USER/Desktop -type f -iname "*.desktop" -exec chmod +x {} \;
 #Copy over French Language files
 COPY French/mo-files/ /usr/share/locale/fr/LC_MESSAGES
 
-#The following lines are TEMPORARY / me trying to find a solution to the little bar at the top
-#not being translated
-#this testing is not working currently
-COPY French/fr.json /resources/novnc/app/locale
-#^ might not work
-#try writing directly to PO, this writes to the correct folder but the ui.js is still messy
-COPY French/fr.po /opt/conda/lib/python3.8/site-packages/jupyter_desktop/share/web/noVNC-1.1.0/po/
-#If this works put in a nicer spot
-COPY French/ui.js /opt/conda/lib/python3.8/site-packages/jupyter_desktop/share/web/noVNC-1.1.0/app/ui.js
-#End testing
+#Configure the panel
+COPY .config/xfce4/xfce4-panel.xml /home/rstudio/.config/xfce4/xfconf/xfce-perchannel-xml/
 
 #Removal area
 #Extra Icons
@@ -337,19 +313,6 @@ RUN apt-get update && apt-get install --yes websockify \
 ADD . /opt/install
 #RUN fix-permissions /opt/install
 
-
-#Instead of using the environment.yml file you can just do a
-# regular (conda forge) conda install websockify
-# RUN conda install -c conda-forge websockify
-#RUN cd /opt/install && \
-#   conda env update -n base --file environment.yml
-
-##Use this instead of infinity for now
-## Configure container startup
-#WORKDIR /home/$NB_USER
-#EXPOSE 8888
-#COPY start-remote-desktop.sh /usr/local/bin/
-#COPY mc-tenant-wrapper.sh /usr/local/bin/mc
-#USER $NB_USER
-#ENTRYPOINT ["tini", "--"]
-#CMD ["start-remote-desktop.sh"]
+#Set Defaults
+ENV DEFAULT_JUPYTER_URL=desktop/?autoconnect=true
+ENV HOME=/home/jovyan
