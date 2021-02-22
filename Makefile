@@ -5,7 +5,7 @@
 # just builds target dockerfiles by combining the dockerbits.
 
 # The docker-stacks tag
-COMMIT := 42f4c82a07ff
+COMMIT := r-4.0.3
 
 Tensorflow-CUDA := 11.1
 PyTorch-CUDA    := 11.0
@@ -85,9 +85,10 @@ RStudio: CPU
 		$(SRC)/∞_CMD.Dockerfile \
 	>   $(OUT)/$@/Dockerfile
 
-# create directories for current images and OL-compliant JupyterLab3 images
-JupyterLab: PyTorch Tensorflow CPU
-
+# create directories for current images and OL-compliant images
+# create OL images with OL-compliant docker-bits, temporary until we want to replace our JupyterLab images with the OL compliant ones
+JupyterLab: PyTorch Tensorflow CPU 
+	
 	for type in $^; do \
 		mkdir -p $(OUT)/$@-$${type}; \
 		cp -r resources/common/* $(OUT)/$@-$${type}/; \
