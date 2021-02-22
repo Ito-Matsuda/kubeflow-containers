@@ -87,8 +87,8 @@ RStudio: CPU
 	>   $(OUT)/$@/Dockerfile
 
 # create directories for current images and OL-compliant JupyterLab3 images
-JupyterLab: PyTorch Tensorflow CPU 
-	
+JupyterLab: PyTorch Tensorflow CPU
+
 	for type in $^; do \
 		mkdir -p $(OUT)/$@-$${type}; \
 		cp -r resources/common/* $(OUT)/$@-$${type}/; \
@@ -110,20 +110,22 @@ JupyterLab: PyTorch Tensorflow CPU
 			$(SRC)/6_$(@)-$(OL).Dockerfile \
 			$(SRC)/∞_CMD.Dockerfile \
 		>   $(OUT)/$@-$${type}-$(OL)/Dockerfile; \
-	done	
 
 # Remote Desktop
-RemoteDesktop: CPU
+RemoteDesktop:
 	mkdir -p $(OUT)/$@
-	echo "REMOTE DESKTOP" 
+	echo "REMOTE DESKTOP"
 	#Copies everything into a remote-desktop directory
-	cp -r scripts/remote-desktop $(OUT)/$@ 
+	cp -r scripts/remote-desktop $(OUT)/$@
 	cp -r resources/common/* $(OUT)/$@
 	#Copies and makes a French directory under output/RemoteDesktop, same level as remote-desktop
 	cp -r resources/remote-desktop/* $(OUT)/$@
 
 	# keep $(SRC)/∞_CMD.Dockerfile out for now
 	$(CAT) \
-		$(TMP)/$<.Dockerfile \
-		$(SRC)/7_RemoteDesktop.Dockerfile \
+		$(SRC)/0_Rocker.Dockerfile \
+		$(SRC)/3_Kubeflow.Dockerfile \
+		$(SRC)/4_CLI.Dockerfile \
+		$(SRC)/6_RemoteDesktop.Dockerfile \
+		$(SRC)/∞_CMD.Dockerfile \
 	>   $(OUT)/$@/Dockerfile

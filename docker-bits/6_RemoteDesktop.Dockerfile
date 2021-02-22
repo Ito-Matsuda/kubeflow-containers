@@ -1,119 +1,3 @@
-
-###############################
-###  docker-bits/0_Rocker.Dockerfile
-###############################
-
-FROM rocker/geospatial:4.0.3
-
-# For compatibility with docker stacks
-ARG NB_USER="jovyan"
-ARG HOME=/home/$NB_USER
-ARG NB_UID="1000"
-ARG NB_GID="100"
-
-# RUN userdel rstudio \
-#     && useradd jovyan -s /sbin/nologin -u $NB_UID -g $NB_GID
-
-
-USER root
-ENV PATH="/home/jovyan/.local/bin/:${PATH}"
-
-RUN apt-get update --yes \
-    && apt-get install --yes python3-pip tini language-pack-fr \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN /rocker_scripts/install_shiny_server.sh \
-    && pip3 install jupyter \
-    && rm -rf /var/lib/apt/lists/*
-
-###############################
-###  docker-bits/3_Kubeflow.Dockerfile
-###############################
-
-RUN pip3 --no-cache-dir install --quiet \
-      'git+https://github.com/statcan/kubeflow-pipelines@b47c8de7f2915722c5c91bf3b1c7d54b946ef2a6#subdirectory=sdk/python/' \
-      'kfp-server-api==1.2.0' \
-      'kfp-tekton==0.6.0' \
-      'kubeflow-fairing==1.0.2' \
-      'ml-metadata==0.26.0' \
-      'kubeflow-metadata==0.3.1' \
-      'kubeflow-pytorchjob==0.1.3' \
-      'kubeflow-tfjob==0.1.3' \
-      'minio==5.0.10' \
-      'git+https://github.com/zachomedia/s3fs@8aa929f78666ff9e323cde7d9be9262db5a17985'
-
-# kfp-azure-databricks needs to be run after kfp
-RUN pip3 --no-cache-dir install --quiet \
-      'fire==0.3.1' \
-      'git+https://github.com/kubeflow/pipelines@1d86111d8f152d3ed7506ea59cee1bfbc28abbf9#egg=kfp-azure-databricks&subdirectory=samples/contrib/azure-samples/kfp-azure-databricks'
-
-###############################
-###  docker-bits/4_CLI.Dockerfile
-###############################
-
-USER root
-
-# Dependencies
-RUN apt-get update && \
-  apt-get install -y --no-install-recommends \
-      'byobu' \
-      'htop' \
-      'jq' \
-      'less' \
-      'openssl' \
-      'ranger' \
-      'tig' \
-      'tmux' \
-      'tree' \
-      'vim' \
-      'zip' \
-      'zsh' \
-      'wget' \
-      'curl' \
-  && \
-    rm -rf /var/lib/apt/lists/*
-
-ARG KUBECTL_VERSION=v1.15.10
-ARG KUBECTL_URL=https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl
-ARG KUBECTL_SHA=38a0f73464f1c39ca383fd43196f84bdbe6e553fe3e677b6e7012ef7ad5eaf2b
-
-ARG MC_VERSION=mc.RELEASE.2021-01-05T05-03-58Z
-ARG MC_URL=https://dl.min.io/client/mc/release/linux-amd64/archive/${MC_VERSION}
-ARG MC_SHA=cd63e436e45feff6e2fa035e4ade9a87d94bd0d1cc9b8616ec0c04d647c3cdb3
-
-ARG AZCLI_URL=https://aka.ms/InstallAzureCLIDeb
-# ARG AZCLI_SHA=53184ff0e5f73a153dddc2cc7a13897022e7d700153f075724b108a04dcec078
-
-ARG OH_MY_ZSH_URL=https://raw.githubusercontent.com/loket/oh-my-zsh/feature/batch-mode/tools/install.sh
-ARG OH_MY_ZSH_SHA=22811faf34455a5aeaba6f6b36f2c79a0a454a74c8b4ea9c0760d1b2d7022b03
-
-# Add helpers for shell initialization
-COPY shell_helpers.sh /tmp/shell_helpers.sh
-
-# kubectl, mc, and az
-RUN curl -LO "${KUBECTL_URL}" \
-    && echo "${KUBECTL_SHA} kubectl" | sha256sum -c - \
-    && chmod +x ./kubectl \
-    && sudo mv ./kubectl /usr/local/bin/kubectl \
-  && \
-    wget --quiet -O mc "${MC_URL}" \
-    && echo "${MC_SHA} mc" | sha256sum -c - \
-    && chmod +x mc \
-    && mv mc /usr/local/bin/mc-original \
-  && \
-    curl -sLO https://aka.ms/InstallAzureCLIDeb \
-    && bash InstallAzureCLIDeb \
-    && rm InstallAzureCLIDeb \
-    && echo "azcli: ok" \
-  && \
-    wget -q "${OH_MY_ZSH_URL}" -O /tmp/oh-my-zsh-install.sh \
-    && echo "${OH_MY_ZSH_SHA} /tmp/oh-my-zsh-install.sh" | sha256sum -c \
-    && echo "oh-my-zsh: ok"
-
-###############################
-###  docker-bits/6_RemoteDesktop.Dockerfile
-###############################
-
 USER root
 
 COPY clean-layer.sh /usr/bin/clean-layer.sh
@@ -202,8 +86,8 @@ RUN \
     apt-get remove -y app-install-data gnome-user-guide && \
     clean-layer.sh
 #was after vs code before
-#None of these are installed in upstream docker images but are present in current remote
 
+#None of these are installed in upstream docker images but are present in current remote
 #Something like 400 mbs
 RUN \
     apt-get update --fix-missing && \
@@ -315,10 +199,8 @@ RUN \
 RUN /bin/bash $RESOURCES_PATH/firefox.sh --install && \
     # Cleanup
     clean-layer.sh
-    
+
 #Copy the French language pack file, must be the 78.6.1esr version
-
-
 RUN wget https://ftp.mozilla.org/pub/firefox/releases/78.6.1esr/linux-x86_64/xpi/fr.xpi -O langpack-fr@firefox.mozilla.org.xpi && \
     mkdir --parents /usr/lib/firefox/distribution/extensions/ && \
     mv langpack-fr@firefox.mozilla.org.xpi /usr/lib/firefox/distribution/extensions/
@@ -396,6 +278,7 @@ RUN add-apt-repository ppa:libreoffice/ppa && \
     clean-layer.sh
 
 #Copy over french config for vscode
+#Both of these are required to have the language pack be recognized on install.
 COPY French/vscode/argv.json /home/$NB_USER/.vscode/
 COPY French/vscode/languagepacks.json /home/$NB_USER/.config/Code/
 
@@ -412,7 +295,7 @@ RUN \
 
 
 #MISC Configuration Area
-#Copy over desktop files. First is dropdown, second is desktop and make them executable
+#Copy over desktop files. First is dropdown, second is desktop and make themm executable
 COPY /desktop-files /usr/share/applications
 COPY /desktop-files /home/$NB_USER/Desktop
 #COPY /usr/share/applications/org.qgis.qgis.desktop /home/$NB_USER/Desktop
@@ -421,13 +304,20 @@ RUN find /home/$NB_USER/Desktop -type f -iname "*.desktop" -exec chmod +x {} \;
 #Copy over French Language files
 COPY French/mo-files/ /usr/share/locale/fr/LC_MESSAGES
 
-
-#Configure the panel
-COPY .config/xfce4/xfce4-panel.xml /home/jovyan/.config/xfce4/xfconf/xfce-perchannel-xml/
+#The following lines are TEMPORARY / me trying to find a solution to the little bar at the top
+#not being translated
+#this testing is not working currently
+COPY French/fr.json /resources/novnc/app/locale
+#^ might not work
+#try writing directly to PO, this writes to the correct folder but the ui.js is still messy
+COPY French/fr.po /opt/conda/lib/python3.8/site-packages/jupyter_desktop/share/web/noVNC-1.1.0/po/
+#If this works put in a nicer spot
+COPY French/ui.js /opt/conda/lib/python3.8/site-packages/jupyter_desktop/share/web/noVNC-1.1.0/app/ui.js
+#End testing
 
 #Removal area
 #Extra Icons
-RUN rm /usr/share/applications/exo-mail-reader.desktop 
+RUN rm /usr/share/applications/exo-mail-reader.desktop
 #Prevent screen from locking
 RUN apt-get remove -y -q light-locker
 
@@ -463,17 +353,3 @@ ADD . /opt/install
 #USER $NB_USER
 #ENTRYPOINT ["tini", "--"]
 #CMD ["start-remote-desktop.sh"]
-
-###############################
-###  docker-bits/∞_CMD.Dockerfile
-###############################
-
-# Configure container startup
-
-WORKDIR /home/$NB_USER
-EXPOSE 8888
-COPY start-custom.sh /usr/local/bin/
-COPY mc-tenant-wrapper.sh /usr/local/bin/mc 
-USER $NB_USER
-ENTRYPOINT ["tini", "--"]
-CMD ["start-custom.sh"]
