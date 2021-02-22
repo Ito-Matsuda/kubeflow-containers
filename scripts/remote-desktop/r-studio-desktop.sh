@@ -17,7 +17,6 @@ if ! hash rstudio 2>/dev/null; then
     # ld library path makes problems
     LD_LIBRARY_PATH="" gdebi --non-interactive ./rstudio.deb
     rm ./rstudio.deb
-#previously was dektop info here but hope we have 
 
 else
     echo "RStudio is already installed"

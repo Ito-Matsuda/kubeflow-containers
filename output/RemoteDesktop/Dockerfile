@@ -11,9 +11,6 @@ ARG HOME=/home/$NB_USER
 ARG NB_UID="1000"
 ARG NB_GID="100"
 
-# RUN userdel rstudio \
-#     && useradd jovyan -s /sbin/nologin -u $NB_UID -g $NB_GID
-
 USER root
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
@@ -156,7 +153,6 @@ RUN \
     clean-layer.sh
 
 # Install Terminal / GDebi (Package Manager) / & archive tools
-#Additional 300 mb
 RUN \
     apt-get update && \
     # Configuration database - required by git kraken / atom and other tools (1MB)
@@ -167,7 +163,6 @@ RUN \
     apt-get install -y --no-install-recommends gdebi && \
     # Search for files
     apt-get install -y --no-install-recommends catfish && \
-    # TODO: Unable to locate package:  apt-get install -y --no-install-recommends gnome-search-tool &&
     # vs support for thunar
     apt-get install -y thunar-vcs-plugin && \
     apt-get install -y --no-install-recommends baobab && \
@@ -196,7 +191,6 @@ RUN \
     clean-layer.sh
 
 #None of these are installed in upstream docker images but are present in current remote
-#Something like 400 mbs
 RUN \
     apt-get update --fix-missing && \
     apt-get install -y sudo apt-utils && \
@@ -317,7 +311,6 @@ COPY French/Firefox/firefox.cfg /usr/lib/firefox/
 
 
 #Install VsCode
-#COPY remote-desktop/vs-code-desktop.sh $RESOURCES_PATH
 RUN apt-get update --yes \
     && apt-get install --yes nodejs npm \
     && /bin/bash $RESOURCES_PATH/vs-code-desktop.sh --install \
@@ -325,7 +318,6 @@ RUN apt-get update --yes \
 
 # Install Visual Studio Code extensions
 # https://github.com/cdr/code-server/issues/171
-# Alternative install: /usr/local/bin/code-server --user-data-dir=$HOME/.config/Code/ --extensions-dir=$HOME/.vscode/extensions/ --install-extension ms-python-release && \
 ARG SHA256py=a4191fefc0e027fbafcd87134ac89a8b1afef4fd8b9dc35f14d6ee7bdf186348
 ARG SHA256gl=ed130b2a0ddabe5132b09978195cefe9955a944766a72772c346359d65f263cc
 RUN \
@@ -357,7 +349,7 @@ RUN \
     clean-layer.sh
 
 
-#QGIS: #btw need to set firefox to be the browser, set some browser env variable
+#QGIS
 COPY qgis-2020.gpg.key $RESOURCES_PATH/qgis-2020.gpg.key
 COPY remote-desktop/qgis.sh $RESOURCES_PATH/qgis.sh
 RUN /bin/bash $RESOURCES_PATH/qgis.sh \
@@ -385,7 +377,6 @@ COPY French/vscode/languagepacks.json /home/$NB_USER/.config/Code/
 ARG SHA256tigervnc=fb8f94a5a1d77de95ec8fccac26cb9eaa9f9446c664734c68efdffa577f96a31
 RUN \
     cd ${RESOURCES_PATH} && \
-    # Tiger VNC
     wget --quiet https://dl.bintray.com/tigervnc/stable/tigervnc-1.10.1.x86_64.tar.gz -O /tmp/tigervnc.tar.gz && \
     echo "${SHA256tigervnc} /tmp/tigervnc.tar.gz" | sha256sum -c - && \
     tar xzf /tmp/tigervnc.tar.gz --strip 1 -C / && \
@@ -394,17 +385,16 @@ RUN \
 
 
 #MISC Configuration Area
-#Copy over desktop files. First is dropdown, second is desktop and make them executable
+#Copy over desktop files. First location is dropdown, then desktop, and make them executable
 COPY /desktop-files /usr/share/applications
 COPY /desktop-files /home/$NB_USER/Desktop
-#COPY /usr/share/applications/org.qgis.qgis.desktop /home/$NB_USER/Desktop
 RUN find /home/$NB_USER/Desktop -type f -iname "*.desktop" -exec chmod +x {} \;
 
 #Copy over French Language files
 COPY French/mo-files/ /usr/share/locale/fr/LC_MESSAGES
 
 #Configure the panel
-COPY .config/xfce4/xfce4-panel.xml /home/rstudio/.config/xfce4/xfconf/xfce-perchannel-xml/
+COPY .config/xfce4/xfce4-panel.xml /home/jovyan/.config/xfce4/xfconf/xfce-perchannel-xml/
 
 #Removal area
 #Extra Icons
@@ -412,7 +402,6 @@ RUN rm /usr/share/applications/exo-mail-reader.desktop
 #Prevent screen from locking
 RUN apt-get remove -y -q light-locker
 
-#ENV KF_LANG=fr
 
 # apt-get may result in root-owned directories/files under $HOME
 RUN usermod -l jovyan rstudio && \
@@ -426,7 +415,26 @@ RUN apt-get update && apt-get install --yes websockify \
     && clean-layer.sh
 
 ADD . /opt/install
-#RUN fix-permissions /opt/install
+
+#Install Miniconda
+#Has to be appended, else messes with qgis
+ENV PATH $PATH:/opt/conda/bin
+
+ARG CONDA_VERSION=py38_4.9.2
+ARG CONDA_MD5=122c8c9beb51e124ab32a0fa6426c656
+
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh -O miniconda.sh && \
+    echo "${CONDA_MD5}  miniconda.sh" > miniconda.md5 && \
+    if ! md5sum --status -c miniconda.md5; then exit 1; fi && \
+    mkdir -p /opt && \
+    sh miniconda.sh -b -p /opt/conda && \
+    rm miniconda.sh miniconda.md5 && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc && \
+    find /opt/conda/ -follow -type f -name '*.a' -delete && \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
+    /opt/conda/bin/conda clean -afy
 
 #Set Defaults
 ENV DEFAULT_JUPYTER_URL=desktop/?autoconnect=true

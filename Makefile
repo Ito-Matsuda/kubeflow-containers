@@ -26,7 +26,6 @@ clean:
 .output:
 	mkdir -p $(OUT)/ $(TMP)/
 
-# I think i need to add "RemoteDesktop" here
 all: JupyterLab RStudio RemoteDesktop
 	@echo "All dockerfiles created."
 
