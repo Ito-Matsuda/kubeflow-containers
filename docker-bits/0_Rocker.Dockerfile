@@ -6,9 +6,6 @@ ARG HOME=/home/$NB_USER
 ARG NB_UID="1000"
 ARG NB_GID="100"
 
-# RUN userdel rstudio \
-#     && useradd jovyan -s /sbin/nologin -u $NB_UID -g $NB_GID
-
 USER root
 ENV PATH="/home/jovyan/.local/bin/:${PATH}"
 
