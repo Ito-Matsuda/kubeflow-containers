@@ -27,10 +27,9 @@ if [ -n "${KF_LANG}" ]; then
         export LANG="en_US.utf8"
     else
         export LANG="fr_CA.utf8"
-        
         #  User's browser lang is set to french, open jupyterlab in french (fr_FR)
         if [ "${DEFAULT_JUPYTER_URL}" != "/rstudio" ]; then
-          export LANG="fr_FR"     
+          export LANG="fr_FR"
           lang_file="/home/${NB_USER}/.jupyter/lab/user-settings/@jupyterlab/translation-extension/plugin.jupyterlab-settings"
           mkdir -p "$(dirname "${lang_file}")" && touch $lang_file
           ( echo    '{'
