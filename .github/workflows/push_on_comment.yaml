@@ -93,8 +93,12 @@ jobs:
           - JupyterLab-PyTorch
           - JupyterLab-Tensorflow
           - RStudio
+<<<<<<< HEAD
           - JupyterLab-CPU-OL-compliant
           - RemoteDesktop
+=======
+          - JupyterLab-CPU-OL-compliant     
+>>>>>>> master
     runs-on: ubuntu-latest
     services:
       registry:
