@@ -257,6 +257,7 @@ RUN \
         # VCS:
         subversion \
         jed \
+        git \
         # odbc drivers
         unixodbc unixodbc-dev \
         # Image support
