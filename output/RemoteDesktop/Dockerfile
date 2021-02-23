@@ -28,11 +28,10 @@ RUN /rocker_scripts/install_shiny_server.sh \
 
 RUN pip3 --no-cache-dir install --quiet \
       'git+https://github.com/statcan/kubeflow-pipelines@b47c8de7f2915722c5c91bf3b1c7d54b946ef2a6#subdirectory=sdk/python/' \
-      'kfp-server-api==1.2.0' \
-      'kfp-tekton==0.6.0' \
+      'kfp-server-api==1.3.0' \      
       'kubeflow-fairing==1.0.2' \
-      'ml-metadata==0.26.0' \
-      'kubeflow-metadata==0.3.1' \
+      'ml-metadata==0.27.0' \
+      'kubeflow-metadata==0.2.0' \
       'kubeflow-pytorchjob==0.1.3' \
       'kubeflow-tfjob==0.1.3' \
       'minio==5.0.10' \
@@ -258,6 +257,7 @@ RUN \
         # VCS:
         subversion \
         jed \
+        git \
         # odbc drivers
         unixodbc unixodbc-dev \
         # Image support
